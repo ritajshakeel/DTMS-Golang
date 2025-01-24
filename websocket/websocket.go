@@ -16,28 +16,23 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// WebSocketManager manages WebSocket connections and broadcasts messages to clients
 type WebSocketManager struct {
-	clients map[*websocket.Conn]bool // Holds the WebSocket connections
-	mu      sync.Mutex               // Protects concurrent access to the clients map
+	clients map[*websocket.Conn]bool
+	mu      sync.Mutex
 }
 
-// Global WebSocket manager instance
 var manager *WebSocketManager
 
-// InitWebSocketManager initializes the WebSocket manager
 func InitWebSocketManager() {
 	manager = &WebSocketManager{
 		clients: make(map[*websocket.Conn]bool),
 	}
 }
 
-// GetManager returns the global WebSocket manager instance
 func GetManager() *WebSocketManager {
 	return manager
 }
 
-// HandleConnections upgrades the HTTP request to a WebSocket connection
 func HandleConnections(c *gin.Context) {
 	w := c.Writer
 	r := c.Request
@@ -60,21 +55,18 @@ func HandleConnections(c *gin.Context) {
 	}
 }
 
-// AddClient adds a WebSocket client to the manager
 func (m *WebSocketManager) AddClient(conn *websocket.Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.clients[conn] = true
 }
 
-// RemoveClient removes a WebSocket client from the manager
 func (m *WebSocketManager) RemoveClient(conn *websocket.Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	delete(m.clients, conn)
 }
 
-// Broadcast sends a message to all connected WebSocket clients
 func (m *WebSocketManager) Broadcast(message []byte) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -88,12 +80,11 @@ func (m *WebSocketManager) Broadcast(message []byte) {
 	}
 }
 
-// SendNotification sends a structured notification to all clients
 func (m *WebSocketManager) SendNotification(event string, data interface{}) {
 	message := map[string]interface{}{
 		"event": event,
 		"data":  data,
 	}
-	msgBytes, _ := json.Marshal(message) // Serialize to JSON
+	msgBytes, _ := json.Marshal(message)
 	m.Broadcast(msgBytes)
 }

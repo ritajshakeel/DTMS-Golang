@@ -17,23 +17,19 @@ import (
 func CreateTask(c *gin.Context) {
 	var task models.Task
 
-	// Bind JSON input to task struct
 	if err := c.ShouldBindJSON(&task); err != nil {
-		// Log the error details for better debugging
+
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
-	// Save the task to the database
 	if err := config.DB.Create(&task).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
 	}
 
-	// Send notification to WebSocket clients
 	websocket.GetManager().SendNotification("task_created", task)
 
-	// Respond with the created task
 	c.JSON(http.StatusOK, gin.H{"message": "Task created successfully", "task": task})
 }
 
@@ -136,7 +132,6 @@ func CreateTaskBulk(c *gin.Context) {
 func GetTasks(c *gin.Context) {
 	var tasks []models.Task
 
-	// Preload User only if AssignedTo is not null
 	if err := config.DB.Preload("User").Find(&tasks).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tasks"})
 		return
@@ -148,11 +143,9 @@ func GetTasks(c *gin.Context) {
 func UpdateTask(c *gin.Context) {
 	task_id := c.Query("task_id")
 
-	// Find the user by ID
 	var task models.Task
 	err := config.DB.First(&task, task_id).Error
 
-	// Send notification to WebSocket clients
 	websocket.GetManager().SendNotification("task_updated", task)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -161,7 +154,6 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
-	// Get Title and Description
 	var body struct {
 		Title            string `json:"title"`
 		Description      string `json:"description"`
@@ -187,7 +179,6 @@ func UpdateTask(c *gin.Context) {
 		task.Description = body.Description
 	}
 
-	// Convert Unix timestamps to time.Time
 	if body.PlannedStartTime != 0 {
 		task.PlannedStartTime = time.Unix(body.PlannedStartTime, 0)
 	}
@@ -208,7 +199,6 @@ func UpdateTask(c *gin.Context) {
 		task.Seconds = body.Seconds
 	}
 
-	// Validate that the planned start time is before the planned end time
 	if !task.PlannedStartTime.Before(task.PlannedEndTime) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": fmt.Sprintf(
@@ -220,7 +210,6 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
-	// Validate that the actual start time is before the actual end time
 	if !task.ActualStartTime.Before(task.ActualEndTime) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": fmt.Sprintf(
@@ -240,8 +229,6 @@ func UpdateTask(c *gin.Context) {
 		})
 		return
 	}
-
-	// respond
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Details added successfully",
 		"task":    task,
@@ -285,28 +272,23 @@ func AssignTask(c *gin.Context) {
 		TaskID int  `json:"task_id"`
 	}
 
-	// Bind JSON input to assignData
 	if err := c.ShouldBindJSON(&assignData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	// Find the task and preload the associated user
 	if err := config.DB.Preload("User").First(&task, assignData.TaskID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
-	// Assign the task to the user
 	task.AssignedTo = &assignData.UserID
 
-	// Save the updated task
 	if err := config.DB.Save(&task).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign task"})
 		return
 	}
 
-	// Fetch the user details to include in the response
 	var user models.User
 	if err := config.DB.First(&user, assignData.UserID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load user details"})
@@ -314,6 +296,5 @@ func AssignTask(c *gin.Context) {
 	}
 	task.User = &user
 
-	// Respond with the updated task
 	c.JSON(http.StatusOK, gin.H{"message": "Task assigned successfully", "task": task})
 }

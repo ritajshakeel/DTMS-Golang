@@ -17,6 +17,6 @@ services:
       dockerfile: Dockerfile
     environment:
       - GO111MODULE=on
-    command: ["go", "test", "./controllers"]  # Runs tests in the controllers directory
+    command: ["go", "test", "./controllers"] 
     depends_on:
-      - app  # Ensure the app service is running before testing
+      - app  

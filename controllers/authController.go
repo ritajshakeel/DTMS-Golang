@@ -30,13 +30,11 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// Check if passwords match
 	if input.Password != input.ConfirmPassword {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Passwords do not match"})
 		return
 	}
 
-	// Check if email already exists
 	var existingUser models.User
 	if err := config.DB.Where("email = ?", input.Email).First(&existingUser).Error; err == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Email already registered"})
@@ -76,24 +74,19 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Check if password matches
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
-
-	// Generate JWT token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
-		"exp":     time.Now().Add(time.Hour * 72).Unix(), // Token expiration
+		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	})
 	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
-
-	// Set token as a cookie
 	c.SetCookie("jwt", tokenString, 3600*72, "/", "", false, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Login successful!", "token": tokenString})

@@ -8,7 +8,7 @@ import (
 )
 
 func SetupTaskRoutes(r *gin.Engine) {
-	tasks := r.Group("/task", middleware.AuthMiddleware()) // Protect task routes with AuthMiddleware
+	tasks := r.Group("/task", middleware.AuthMiddleware())
 	{
 		tasks.POST("/create", controllers.CreateTask)
 		tasks.POST("/bulkupload", controllers.CreateTaskBulk)
